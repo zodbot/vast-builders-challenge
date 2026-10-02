@@ -48,3 +48,12 @@ verify-vm.sh
 
 # --- live screen ---
 screen/
+
+# Property Studio local evidence, credentials, runtime assets and tests
+.property-data/
+.pytest_cache/
+*.egg-info/
+node_modules/
+workbook-runtime/
+tools/property-studio/deploy/generated/
+tools/property-studio/deploy/generated.json
