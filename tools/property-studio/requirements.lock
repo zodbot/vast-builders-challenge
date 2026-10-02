@@ -41,3 +41,9 @@ typing_extensions==4.16.0
 tzdata==2026.4
 urllib3==2.8.0
 uvicorn==0.54.0
+flatbuffers==25.12.19
+imageio-ffmpeg==0.6.0
+onnxruntime==1.30.0
+pathvalidate==3.3.1
+piper-tts==1.8.0
+protobuf==7.36.2

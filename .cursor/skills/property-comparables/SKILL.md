@@ -7,4 +7,4 @@ Inspect `show RUN_ID` and the saved dossier in `tools/property-studio`. Comparab
 
 Keep current asks, historical asks, executed transactions, algorithmic estimates and scenarios separate. A removed listing does not establish an achieved price. Preserve concessions, lease term, original feed and event date. Syndicated copies are not independent confirmations.
 
-Explain actual bedrooms versus dens, bath-count discrepancies, floor, view, laundry, outdoor space and condition. No unsupported percentage premiums or double counting floor and view. Candidate rent does not automatically become underwriting rent; the user chooses an explicit, sourced scenario input.
+Explain actual bedrooms versus dens, bath-count discrepancies, floor, view, laundry, outdoor space and condition. No unsupported percentage premiums or double counting floor and view. The user has authorized editable defaults. A median of filtered nearby asking rents may seed the rent scenario, explicitly labeled as asking-price context, not achieved rent. Exclude wrong markets, future/stale dates, incompatible unit sizes and restricted-sale outliers using `comps.py`.

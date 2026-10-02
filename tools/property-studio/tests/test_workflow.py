@@ -21,6 +21,7 @@ def settings(tmp_path,monkeypatch):
 @pytest.fixture
 def service(settings,monkeypatch):
     monkeypatch.setattr('property_studio.workbook.export_workbook',lambda run,folder,settings:(folder/'analysis.xlsx').write_bytes(b'test only'))
+    monkeypatch.setattr(Service,'video',lambda self,run:'Video boundary mocked; covered by live render verification')
     s=Service(settings)
     yield s
     s.worker.shutdown(wait=True)
@@ -144,3 +145,20 @@ def test_api_missing_finance_and_extra_fields(settings):
     with TestClient(create_app(settings)) as client:
         assert client.post('/api/runs',json={}).status_code==422
         assert client.post('/api/runs',json={'address':'1 Main','assumptions':{'purchase_price':-10}}).status_code==422
+
+
+def test_video_retry_keeps_workbook_script_and_scenario(service):
+    run=demo(service)
+    service.submit(run.id,'video').result()
+    revised=service.store.get(run.id)
+    assert revised.version==run.version
+    assert revised.story.version==revised.version
+    assert revised.artifacts==run.artifacts
+
+
+def test_completed_resume_keeps_outputs(service):
+    run=demo(service)
+    service.submit(run.id).result()
+    revised=service.store.get(run.id)
+    assert revised.version==run.version
+    assert revised.artifacts==run.artifacts

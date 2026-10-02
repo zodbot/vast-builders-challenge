@@ -38,5 +38,6 @@ class Settings:
     def capabilities(self):
         return {"cosmos": bool(self.cosmos_url), "language_model": bool(self.llm_key and self.llm_model),
                 "web_search": bool(self.search_key), "vast_s3": bool(self.s3_bucket),
-                "workbook": bool(os.getenv("PROPERTY_ARTIFACT_MODULE")), "authentication": bool(self.token),
+                # openpyxl is a required dependency and provides the portable fallback.
+                "workbook": True, "authentication": bool(self.token),
                 "note": "Configured does not mean live-verified."}

@@ -1,6 +1,8 @@
 # Property Studio
 
-A local working application for evidence-led property research, Cosmos photo analysis, financial scenarios and video scripts. The workshop integration still needs live VM verification. Start with the synthetic demo; it never claims to have performed live research.
+A working application for evidence-led property research, Cosmos photo analysis, financial scenarios and video scripts. Paste a listing URL to generate a property-specific script, narrated portrait MP4, captions and financial workbook with editable defaults. See the current [implementation checkpoint](HANDOVER.md#listing-to-video-update--october-2-2026). Start with the synthetic demo; it never claims to have performed live research.
+
+The completed [501 Beale St Unit 15H example video](examples/501-beale-st-unit-15h.mp4) is included in this repository: an 89-second portrait MP4 with listing photos, AI narration and the dramatic monthly-cost script. It is a draft from the October 2, 2026 run; financial figures reflect that run's editable assumptions.
 
 ## Run
 
@@ -14,7 +16,7 @@ python3 -m venv .venv
 
 Open `http://127.0.0.1:8080`. Select **Explore a synthetic demo**. This creates invented property data, three labeled illustrations, a conflicting-rental-price example, a draft script, and a financial workbook.
 
-The Python environment already installed during local development is at the repository root. From this directory you can instead run `../../.venv/bin/python main.py`.
+On the team VM, the installed Python environment is this directory's `.venv`. Application endpoint overrides and the access token are in `/config/property-studio.env`; source that file before running commands. Credentials must stay outside Git.
 
 The application reads exported environment variables; it does not automatically source `.env` files. See `.env.example`. Never commit actual credentials.
 
@@ -32,6 +34,7 @@ python -m property_studio finance RUN_ID
 python -m property_studio script RUN_ID
 python -m property_studio audit RUN_ID
 python -m property_studio export RUN_ID
+python -m property_studio video RUN_ID
 python -m pytest -q
 ```
 
@@ -56,7 +59,7 @@ Example live request (replace the address and sources):
 }
 ```
 
-Only confirm identity and authorize images when those statements are true. URL-only intake deliberately asks for an exact address; it does not silently select a unit. Unsupported sites can use manual documents and photographs. HomeHarvest runs through its own Realtor.com adapter; arbitrary listing URLs are not passed to it.
+Listing photos are authorized for this team workspace by default. URL intake resolves the address and unit from listing data, then queries HomeHarvest using the resolved address. Unsupported sites may need an address or manual documents/photos. Missing financial costs receive labeled assumptions; the asking price is never invented.
 
 ## Architecture
 
@@ -69,17 +72,19 @@ Only confirm identity and authorize images when those statements are true. URL-o
 - `storage.py`: atomic local manifests, history and optional VAST S3 backup.
 - `workbook.py`, `exports/`: artifact-tool workbook generation and verification.
 - `portable_workbook.py`: fallback when artifact-tool is unavailable on a VM; writes the same formulas with initial Python-calculated caches.
-- `api.py`, `ui/`: authenticated API and a small responsive interface.
+- `listing.py`, `comps.py`, `defaults.py`: resolved listing intake, comparable filtering and attributed financial defaults.
+- `video.py`: narrated portrait MP4 and SRT rendering; models cached on the application PVC.
+- `api.py`, `ui/`: authenticated API and a responsive script/video workspace.
 
 The workbook recalculates ordinary financial inputs in Excel. Loan term, holding duration and assessment installment duration currently require regeneration in the app. No tax benefits, PMI cancellation or lender-specific underwriting is inferred.
 
 ## Workshop status
 
-Implemented adapters are not evidence of live service access. Cosmos image payloads, W&B endpoint/model, public-source coverage, VAST credentials and Kubernetes deployment must be verified on the VM. `doctor --live` checks Cosmos model discovery, not image inference.
+The [handover checkpoint](HANDOVER.md#listing-to-video-update--october-2-2026) records what was actually verified on the VM: Kubernetes deployment, VAST-backed persistent storage, Cosmos image inference on a synthetic illustration, and W&B inference using synthetic text fixtures. A real Zillow listing now completes address resolution, local comps, Cosmos photo analysis, financial defaults, a script and video. Broader public-record search remains optional and unconfigured. `doctor --live` checks Cosmos model discovery, not image inference.
 
 The current research implementation uses supplied sources, directed web search and reviewable extraction. It does not yet implement dedicated assessor/court/permit database connectors, automatic parcel resolution, automated HOA document review completion, or reliable nationwide history coverage. Comp candidates require review and do not automatically determine a supported market rent.
 
-VSS media ingestion, Embed/VastDB writes, W&B Weave tracing and video rendering are not implemented. Local stage timing records are available. Follow `HANDOVER.md` for the exact next steps.
+VSS media ingestion, Embed/VastDB writes and W&B Weave tracing are not implemented. Narrated video rendering is implemented using the listing photos, Piper and FFmpeg. Local stage timing records are available. Follow `HANDOVER.md` for the exact next steps.
 
 Use a durable PVC for the deployed application. The optional S3 adapter copies run artifacts but does not currently restore a lost local index automatically. The app is designed for one team and one worker, not public multi-tenant use.
 

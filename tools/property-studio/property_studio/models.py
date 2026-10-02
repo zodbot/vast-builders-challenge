@@ -38,7 +38,7 @@ class Property(Record):
     association: str | None = None
     kind: str = "condo"
     facts: dict = Field(default_factory=dict)
-    identity_status: Literal["user_confirmed", "needs_review", "synthetic"] = "needs_review"
+    identity_status: Literal["user_confirmed", "resolved", "needs_review", "synthetic"] = "needs_review"
 
 
 class Claim(Record):
@@ -61,12 +61,21 @@ class Media(Record):
     permission: Literal["user_authorized", "review_required", "synthetic"] = "review_required"
 
 
-class Observation(Record):
-    media_id: str
+class VisualCriterion(Record):
+    criterion: str
+    observation: str
+    evidence: str
+
+
+class PhotoAnalysis(Record):
     description: str
     room: str
-    criteria: list[dict[str, str]]
+    criteria: list[VisualCriterion]
     limitations: list[str]
+
+
+class Observation(PhotoAnalysis):
+    media_id: str
     provider: str = "cosmos"
     model: str = ""
     rubric_version: str = "1"
@@ -91,6 +100,7 @@ class Comparable(Record):
     rationale: str = "Candidate only; verify identity, date and terms."
     concessions: Decimal | None = None
     lease_months: int | None = None
+    distance_miles: float | None = None
 
 
 class Assumptions(Record):
@@ -129,16 +139,20 @@ class RunInput(Record):
     url: str | None = Field(default=None, max_length=2000)
     unit: str | None = Field(default=None, max_length=50)
     association: str | None = Field(default=None, max_length=200)
-    confirm_identity: bool = False
-    authorize_images: bool = False
+    confirm_identity: bool = True
+    authorize_images: bool = True
     image_urls: list[str] = Field(default_factory=list, max_length=12)
     source_urls: list[str] = Field(default_factory=list, max_length=20)
     use_homeharvest: bool = True
     mode: Literal["live", "synthetic"] = "live"
+    render_video: bool = True
     assumptions: Assumptions = Field(default_factory=Assumptions)
 
     @model_validator(mode="after")
     def identity_required(self):
+        if self.address.strip().lower().startswith(("https://", "http://")):
+            object.__setattr__(self,"url",self.address.strip())
+            object.__setattr__(self,"address","")
         if self.mode == "live" and not (self.address.strip() or self.url):
             raise ValueError("Provide an address or a listing URL")
         return self

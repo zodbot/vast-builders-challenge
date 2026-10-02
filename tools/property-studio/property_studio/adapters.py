@@ -4,6 +4,7 @@ import hashlib
 import http.client
 import ipaddress
 import json
+import re
 import socket
 import ssl
 import subprocess
@@ -12,6 +13,8 @@ import time
 from urllib.parse import urlsplit, urljoin
 import httpx
 from bs4 import BeautifulSoup
+from pydantic import ValidationError
+from .models import PhotoAnalysis
 
 
 class ProviderError(RuntimeError):
@@ -109,8 +112,16 @@ class Cosmos:
         result = request_json("POST", s.cosmos_url+"/v1/chat/completions", headers=headers, json={
             "model": model, "messages": [{"role":"user", "content":[{"type":"text","text":prompt},
             {"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+encoded}}]}],
-            "temperature":0, "max_tokens":1400})
-        output = parse_json_reply(result["choices"][0]["message"]["content"])
+            "temperature":0, "max_tokens":1400,
+            "response_format":{"type":"json_schema","json_schema":{
+                "name":"property_photo_analysis","strict":True,"schema":PhotoAnalysis.model_json_schema()}}})
+        choice = result["choices"][0]
+        if choice.get("finish_reason") == "length":
+            raise ProviderError("Cosmos image response exceeded its output budget; retry with a shorter rubric")
+        try:
+            output = PhotoAnalysis.model_validate(parse_json_reply(choice["message"]["content"])).model_dump()
+        except ValidationError:
+            raise ProviderError("Cosmos response did not match the photo observation schema") from None
         return output, model
 
 
@@ -136,9 +147,12 @@ def search_web(settings, query):
     return result.get("web",{}).get("results",[])
 
 
-def homeharvest(location, listing_type="for_sale", radius=None):
+def homeharvest(location, listing_type="for_sale", radius=None, **filters):
+    if urlsplit(location).scheme or not re.search(r'\d',location):
+        raise ProviderError("HomeHarvest requires a resolved street address, not a listing URL")
     args = {"location":location,"listing_type":listing_type,"return_type":"pydantic","limit":10}
     if radius is not None: args["radius"]=radius
+    args.update(filters)
     try:
         result=subprocess.run([sys.executable,'-m','property_studio.harvest_worker'],input=json.dumps(args),text=True,capture_output=True,timeout=60)
     except subprocess.TimeoutExpired:

@@ -12,7 +12,7 @@ def main():
     doctor=sub.add_parser("doctor"); doctor.add_argument("--live",action="store_true")
     a=sub.add_parser("analyze"); a.add_argument("--input",type=Path); a.add_argument("--demo",action="store_true")
     show=sub.add_parser("show"); show.add_argument("run_id")
-    for name in ["resume","research","images","finance","script","export","audit"]:
+    for name in ["resume","research","images","finance","script","export","video","audit"]:
         q=sub.add_parser(name); q.add_argument("run_id")
     args=p.parse_args(); s=Settings.load(); service=Service(s)
     try:

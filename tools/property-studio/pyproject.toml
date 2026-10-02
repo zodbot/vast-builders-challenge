@@ -7,7 +7,7 @@ name = "property-studio"
 version = "0.1.0"
 description = "Evidence-led property research, Cosmos analysis and video scripts"
 requires-python = ">=3.12"
-dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "httpx>=0.27,<1", "pydantic>=2.10,<3", "pillow>=11,<13", "pypdf>=5,<7", "beautifulsoup4>=4.12,<5", "boto3>=1.35,<2", "homeharvest>=0.8,<1", "openpyxl>=3.1,<4"]
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "httpx>=0.27,<1", "pydantic>=2.10,<3", "pillow>=11,<13", "pypdf>=5,<7", "beautifulsoup4>=4.12,<5", "boto3>=1.35,<2", "homeharvest>=0.8,<1", "openpyxl>=3.1,<4", "piper-tts>=1.8,<2", "imageio-ffmpeg>=0.6,<1"]
 
 [project.optional-dependencies]
 test = ["pytest>=8,<10"]

@@ -46,7 +46,7 @@ def create_app(settings=None):
         response.headers["X-Content-Type-Options"]="nosniff"
         response.headers["Referrer-Policy"]="no-referrer"
         response.headers["Cache-Control"]="no-store"
-        response.headers["Content-Security-Policy"]="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'"
+        response.headers["Content-Security-Policy"]="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; media-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'"
         return response
 
     @app.exception_handler(ValueError)
@@ -165,14 +165,19 @@ def create_app(settings=None):
                                     {"question":str(body.get("question",""))[:2000],"property":run.property.model_dump(),"claims":[c.model_dump() for c in run.claims],"metrics":run.finance.get("metrics"),"sources":[{"id":s.id,"title":s.title,"excerpt":s.excerpt[:2500]} for s in run.sources[:20]]})
         if not set(result.get("source_ids",[]))<={s.id for s in run.sources}: raise ValueError("Answer referenced an unknown source; retry")
         return result
+    @app.post("/api/runs/{run_id}/video",status_code=202)
+    def render_video(run_id:str):
+        service.store.get(run_id)
+        service.submit(run_id,"video")
+        return {"id":run_id}
     @app.get("/api/runs/{run_id}/artifacts/{kind}")
     def artifact(run_id:str,kind:str):
         run=service.store.get(run_id)
         filename=run.artifacts.get(kind)
         if not filename: raise HTTPException(404,"Artifact unavailable or stale; regenerate this run")
-        if kind=="script" and any(f["severity"]=="block" for f in audit(run)):
+        if kind in {"script","video"} and any(f["severity"]=="block" for f in audit(run)):
             raise HTTPException(409,"Resolve the script audit findings before exporting")
-        return FileResponse(service.store.folder(run_id)/filename,filename=filename)
+        return FileResponse(service.store.folder(run_id)/filename,filename=filename,media_type="video/mp4" if kind=="video" else None,content_disposition_type="inline" if kind=="video" else "attachment")
     @app.get("/api/runs/{run_id}/media/{media_id}")
     def media(run_id:str,media_id:str):
         run=service.store.get(run_id)

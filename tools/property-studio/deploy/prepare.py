@@ -19,6 +19,7 @@ def main():
     p=argparse.ArgumentParser()
     p.add_argument('--namespace',required=True)
     p.add_argument('--pvc',help='Existing application PVC for durable evidence')
+    p.add_argument('--node',help='Optional verified worker hostname that can mount the application PVC')
     p.add_argument('--ephemeral',action='store_true',help='Explicitly accept evidence loss on pod replacement')
     args=p.parse_args()
     if not re.fullmatch(r'[a-z0-9](?:[-a-z0-9]*[a-z0-9])?',args.namespace): p.error('Invalid namespace')
@@ -64,6 +65,8 @@ os.execvp('python',['python','main.py'])
            {'apiVersion':'networking.k8s.io/v1','kind':'Ingress','metadata':{**meta,'annotations':{'nginx.ingress.kubernetes.io/rewrite-target':'/$2','nginx.ingress.kubernetes.io/use-regex':'true','nginx.ingress.kubernetes.io/proxy-body-size':'12m'}},
             'spec':{'ingressClassName':'nginx','rules':[{'host':host,'http':{'paths':[{'path':'/app(/|$)(.*)','pathType':'ImplementationSpecific',
                    'backend':{'service':{'name':name,'port':{'number':80}}}}]}}]}}]
+    if args.node:
+        items[1]['spec']['template']['spec']['nodeSelector']={'kubernetes.io/hostname':args.node}
     print(json.dumps({'apiVersion':'v1','kind':'List','items':items},indent=2))
 
 

@@ -1,6 +1,63 @@
 # Property Studio VM handover
 
-The local application is built and ready to push to the repository, pull on the workshop VM, and continue with Codex. No remote push or Kubernetes deployment was performed in the local session. No VM credentials were read or copied.
+The application has been rebuilt and deployed from the team VM. Read **Listing-to-video update** below for the latest product behavior; the earlier VM checkpoint and original local-session notes are historical background.
+
+## Earlier VM checkpoint — October 2, 2026
+
+- App: `http://video-lab-team-23.cosmos.vastdata.com/app/`, in namespace `team-23`. Deployment, Service, Ingress and code ConfigMap are named `property-studio`. The existing shared VSS deployments were not changed.
+- Persistent storage: dedicated 1 GiB `property-studio-data` PVC, bound through the VAST filesystem storage class and mounted at `/data`. The version-2 demo, three photos and all artifact downloads survived pod replacement. This is separate from S3 ingest buckets. Optional S3 backup is not configured.
+- Python 3.12 environment: `tools/property-studio/.venv`; pinned dependencies installed. **26 tests pass** (one upstream Starlette TestClient deprecation warning).
+- Both VM-local and deployed synthetic workflows completed; workbook, dossier and script downloads returned HTTP 200. The deployed scenario revision retained its photos and regenerated all artifacts at version 2.
+- Cosmos model discovery, readiness and liveness returned HTTP 200. Live image inference on a **synthetic illustration** now returns schema-valid observations. This proves image transport and structured response handling, not real property-photo quality.
+- Fixed a live integration failure: a prompt requesting JSON alone returned prose. Cosmos requests now include a typed `response_format` JSON schema, validate the returned fields, and report truncated output explicitly. See [NVIDIA's structured-output contract](https://github.com/NVIDIA/cosmos/blob/main/cookbooks/cosmos3/nim/reasoning.md#structured-output).
+- W&B model discovery, JSON inference, document extraction and script generation succeeded using `meta-llama/Llama-3.3-70B-Instruct`. Extraction and script tests used invented fixtures. The generated script audit flagged unsupported numeric references; those drafts still need review. Model availability does not imply every generated draft passes the audit.
+- Cosmos and W&B model discovery also returned HTTP 200 from inside the deployed application pod.
+- VSS login, identity verification and a bounded archive search succeeded. Those results were only an integration check and were not added as property evidence.
+- Authentication is enabled. Unauthenticated API calls returned HTTP 401; login and authenticated downloads succeeded. The app's generated access token and non-secret endpoint overrides are in `/config/property-studio.env` (mode 0600), outside Git. W&B and GPU credentials stay in the supplied team environment and the dedicated `property-studio-env` Kubernetes Secret.
+- The workbook capability now correctly reports available when using the installed portable Python fallback.
+- Browser automation was unavailable in this VM session; route, static asset, authentication and workflow checks used HTTP. Native Excel recalculation was not tested.
+
+To resume on this VM (never print the sourced variables):
+
+```sh
+cd tools/property-studio
+source /config/property-studio.env
+export KUBECONFIG=/config/team-23-k8s.yaml
+export PATH="$HOME/.local/bin:$PATH"
+.venv/bin/python -m property_studio doctor --live
+kubectl -n team-23 get deployment/property-studio pvc/property-studio-data
+```
+
+The first real property run still needs the user's exact address/unit and an authorized photograph. Brave search is not configured; supplied documents and URLs remain available. Resolve the organizer question about indexed property video before adding any ingestion path. No video was uploaded or published, and no messages were sent. The VM changes have not been committed or pushed.
+
+## Listing-to-video update — October 2, 2026
+
+The user's revised product priority is an automatic listing-to-script, Excel and narrated-video workflow. Listing image rights are authorized for this workspace. Do not reintroduce address/rights/finance approval checkboxes for ordinary successful intake.
+
+The first real listing exposed defects that the synthetic demo did not: a Zillow URL was sent to HomeHarvest as an address, unrelated Virgin Islands comps and future sale dates were accepted, source facts and photos never reached finance, and generated scripts were generic. Those paths are now replaced:
+
+- `listing.py` parses Zillow embedded property data, generic JSON-LD and page titles; known portal URL slugs are fallback lookup hints. HomeHarvest accepts a resolved address only and validates the exact unit. Unsupported/inaccessible pages can still need an address; arbitrary-site success is not guaranteed.
+- Listing price, HOA, size, description, coordinates and photos are saved with provenance. Photo sampling covers the gallery instead of taking only the first kitchen shots. Listing statements remain attributed; automatic drafting does not claim independent verification.
+- `comps.py` excludes wrong cities/states, properties over a mile away, different bedroom counts, dissimilar sizes, stale/future dates, restricted ownership and extreme sale-price-per-foot outliers. Displayed candidates are context, not adjusted appraisals. Asking rents are not signed leases.
+- `defaults.py` fills missing financial budgets with labeled editable assumptions. The verified mortgage benchmark is Freddie Mac's 7.28% 30-year average dated October 1, 2026; it is not a jumbo-loan or lender quote. Listing dues take precedence. Rent uses filtered asking-rent context, a portal estimate, or an explicitly labeled placeholder. Asking price is never invented.
+- The user requested a more sensational script: dramatic hook, real monthly-cost reveal, local comparison and buy/rent/negotiate closing question. The writer uses a sourced scene outline and two bounded validation attempts. A property-specific editorial fallback keeps outputs useful if generation fails. W&B now uses `Qwen/Qwen3-30B-A3B-Instruct-2507`, which passed the full-script check; the original Llama model repeatedly returned very short scripts.
+- `video.py` renders a portrait 720×1280 H.264/AAC MP4 plus SRT captions, with listing photos, title cards and local Piper narration. The LJSpeech voice uses a public-domain dataset; its model card is cached with the model under `/data/runtime`. FFmpeg comes from `imageio-ffmpeg`. ONNX inference is explicitly limited to two threads to fit the deployed CPU budget. No video is published or sent to VSS ingestion.
+- Regression suite: **35 tests pass**; JavaScript syntax and pinned dependency consistency checks pass. Tests cover URL normalization, generic JSON-LD, exact units, wrong-market/future-date comp rejection, defaults, and preserving artifacts on video retries.
+- Verified deployed real run `71368733d1c746b496988b42ee1a390a` completes listing intake, 12 local comparables, 8 photo analyses, finance, the stronger script, Excel and video. Video rendering took 40.78 seconds after limiting ONNX threads. The final 89.23-second 720×1280 H.264/AAC video is saved on the VM at `tools/property-studio/.property-data/latest-listing-video.mp4`. All five artifact downloads returned HTTP 200; video range requests returned HTTP 206. The app supports opening this run with `?run=71368733d1c746b496988b42ee1a390a`.
+- The app starts on Script & video, makes source/review details optional, shows rates as percentages, and refreshes the financial inputs when automatic defaults arrive. Rendering/retrying video preserves the script and workbook.
+- The cluster's control-plane node could not mount the application PVC. The app is pinned to the previously verified worker `cosmos-r18-122`. Generate future manifests with `--node cosmos-r18-122`; only this app's Deployment changed.
+
+Deployment update:
+
+```sh
+cd tools/property-studio
+source /config/property-studio.env
+export KUBECONFIG=/config/team-23-k8s.yaml
+export PATH="$HOME/.local/bin:$PATH"
+.venv/bin/python deploy/prepare.py --namespace team-23 --pvc property-studio-data --node cosmos-r18-122 > deploy/generated.json
+kubectl -n team-23 apply -f deploy/generated.json
+kubectl -n team-23 rollout restart deployment/property-studio
+```
 
 ## Prompt to give Codex on the VM
 

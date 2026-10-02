@@ -20,6 +20,24 @@ def test_cosmos_sends_real_image_payload_and_auth(tmp_path,monkeypatch):
     body=calls[-1][2]
     assert body['headers']['Authorization']=='Bearer test-only-token'
     assert body['json']['messages'][0]['content'][1]['image_url']['url'].startswith('data:image/jpeg;base64,')
+    response_format=body['json']['response_format']
+    assert response_format['type']=='json_schema'
+    assert set(response_format['json_schema']['schema']['required'])=={'description','room','criteria','limitations'}
+
+
+def test_cosmos_rejects_incomplete_observations(tmp_path,monkeypatch):
+    import pytest
+    from property_studio.adapters import ProviderError
+    monkeypatch.setenv('COSMOS3_REASON_URL','https://configured.example')
+    monkeypatch.setenv('COSMOS3_REASON_MODEL','configured-model')
+    photo=tmp_path/'photo.jpg';photo.write_bytes(b'image-fixture')
+    for content,reason,message in [
+        ('{"description":"A room"}','stop','schema'),
+        ('{"description":','length','output budget'),
+        ('{"description":"A room","room":"room","criteria":[{"criterion":"condition"}],"limitations":[]}','stop','schema'),
+    ]:
+        monkeypatch.setattr('property_studio.adapters.request_json',lambda *a,**k:{'choices':[{'finish_reason':reason,'message':{'content':content}}]})
+        with pytest.raises(ProviderError,match=message): Cosmos(Settings.load()).analyze(photo,[])
 
 
 def test_wandb_uses_explicit_model_and_project(monkeypatch):
